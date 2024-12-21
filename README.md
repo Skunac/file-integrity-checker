@@ -3,7 +3,7 @@
 ## 📋 **Overview**
 The **File Integrity Checker** is a simple tool to verify if log files have been tampered with. It helps ensure log files remain unchanged, which is important for system security and auditing.
 
-This project is part of my learning journey following the [DevOps Roadmap](https://roadmap.sh/devops). It introduces key concepts like hashing, file integrity checks, and basic scripting.
+This project is part of my learning journey following the [DevOps Roadmap](https://roadmap.sh/devops). It directly follows the [File Integrity Checker Project](https://roadmap.sh/projects/file-integrity-checker) outlined in the roadmap. The project introduces key concepts like hashing, file integrity checks, and basic scripting.
 
 ---
 
@@ -30,38 +30,56 @@ This project is part of my learning journey following the [DevOps Roadmap](https
 
 ---
 
-## ⚙️ **Usage**
-### **1. Initialize File Hashes**
-```bash
-./integrity-check init /var/log
-```
-**Output:**
-```
-Hashes stored successfully.
-```
-This stores initial hashes for log files in `/var/log`.
+## ⚙️ **Setup and Usage**
 
-### **2. Check File Integrity**
-```bash
-./integrity-check check /var/log/syslog
-```
-**Output (If tampered):**
-```
-Status: Modified (Hash mismatch)
-```
-**Output (If unchanged):**
-```
-Status: Unmodified
-```
+1. **Clone the Repo**  
+   Clone the repository and navigate to the project directory:
+   ```bash
+   git clone https://github.com/your-username/file-integrity-checker.git
+   cd file-integrity-checker
+   ```
 
-### **3. Update File Hash**
-```bash
-./integrity-check update /var/log/syslog
-```
-**Output:**
-```
-Hash updated successfully.
-```
+2. **Make Script Executable**  
+   Make the main script executable:
+   ```bash
+   chmod +x integrity-check
+   ```
+
+3. **Initialize File Hashes**  
+   Generate and store hashes for either a single file or an entire directory:
+   ```bash
+   ./integrity-check init /path/to/your/log/files
+   ```
+   Examples:
+   - Single file:
+     ```bash
+     ./integrity-check init /var/log/syslog
+     ```
+   - Directory:
+     ```bash
+     ./integrity-check init /var/log
+     ```
+
+4. **Check File Integrity**  
+   Compare current hashes with stored ones to detect changes:
+   ```bash
+   ./integrity-check check /path/to/your/log/files
+   ```
+
+5. **Update File Hashes**  
+   Recalculate and store updated hashes when changes are expected:
+   ```bash
+   ./integrity-check update /path/to/your/log/files
+   ```
+
+---
+
+## 🚀 **Commands Summary**
+| **Command**                               | **Description**                                      |
+|-------------------------------------------|------------------------------------------------------|
+| `./integrity-check init /path`            | Store initial hashes for the specified file or path. |
+| `./integrity-check check /path`           | Check file integrity by comparing hashes.            |
+| `./integrity-check update /path`          | Update hashes for modified files.                   |
 
 ---
 
@@ -76,22 +94,4 @@ file-integrity-checker/
 
 ---
 
-## 🛠️ **Setup**
-1. **Clone the Repo**
-   ```bash
-   git clone https://github.com/your-username/file-integrity-checker.git
-   cd file-integrity-checker
-   ```
-2. **Make Script Executable**
-   ```bash
-   chmod +x integrity-check
-   ```
-3. **Run Initial Setup**
-   ```bash
-   ./integrity-check init /path/to/your/log/files
-   ```
-
----
-
 **Simple, effective log file security!** 🚀
-

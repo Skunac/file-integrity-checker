@@ -1,38 +1,99 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]; then
-    echo "Error: At least 2 arguments required"
-    echo "Usage: $0 <command> <path>"
-    exit 1
-fi
+# Utility Functions
 
-init() {
+# Checks if a given path exists
+# Args: $1 - path to check
+# Returns: 0 if exists, 1 if not
+check_path_exists() {
     local path="$1"
-    local processed=false
-
     if [ ! -e "$path" ]; then
         echo "Error: $path does not exist"
         return 1
     fi
+    return 0
+}
+
+# Process all files in a directory recursively
+# Args:
+#   $1 - directory path
+#   $2 - callback function to execute on each file
+#   $3 - action type ("init" or "check")
+# Returns: "true" if files were processed/modified, "false" otherwise
+process_directory() {
+    local path="$1"
+    local callback="$2"
+    local action="$3"
+    local processed=false
+
+    # Iterate through all files in directory
+    while IFS= read -r -d '' item; do
+        if [ -f "$item" ]; then
+            if $callback "$item"; then
+                # For init, success means we processed a file
+                [ "$action" = "init" ] && processed=true
+            else
+                # For check, failure means we found a modification
+                [ "$action" = "check" ] && processed=true
+            fi
+        fi
+    done < <(find "$path" -print0)
+
+    echo "$processed"
+}
+
+# Core Hash Functions
+
+# Calculate SHA256 hash of a file
+# Args: $1 - file path
+# Returns: hash string
+calculate_hash() {
+    local file="$1"
+    local fullpath=$(realpath "$file")
+    echo $(sha256sum "$fullpath" | awk '{print $1}')
+}
+
+# Store a hash in the hash store file
+# Args:
+#   $1 - full path of file
+#   $2 - hash value
+store_hash() {
+    local fullpath="$1"
+    local hash="$2"
+    local target="hash_store"
+    echo "$fullpath:$hash" >> "$target"
+}
+
+# Retrieve stored hash for a file
+# Args: $1 - full path of file
+# Returns: stored hash value or empty if not found
+get_stored_hash() {
+    local fullpath="$1"
+    local target="hash_store"
+    grep "^$fullpath:" "$target" | cut -d: -f2
+}
+
+# Main Functions
+
+# Initialize hashes for files
+# Args: $1 - path to file or directory
+# Returns: 0 on success, 1 on failure
+init() {
+    local path="$1"
+    check_path_exists "$path" || return 1
 
     if [ -d "$path" ]; then
-        while IFS= read -r -d '' item; do
-            if [ -f "$item" ]; then
-                init_hash "$item"
-                processed=true
-            fi
-        done < <(find "$path" -print0)
-
-        if [ "$processed" = true ]; then
+        # Process directory
+        local result=$(process_directory "$path" "init_hash" "init")
+        if [ "$result" = "true" ]; then
             echo "Hashes stored successfully."
             return 0
         else
             echo "No files processed."
             return 1
         fi
-    fi
-
-    if [ -f "$path" ]; then
+    elif [ -f "$path" ]; then
+        # Process single file
         if init_hash "$path"; then
             echo "Hashes stored successfully."
             return 0
@@ -43,50 +104,44 @@ init() {
     return 1
 }
 
+# Calculate and store hash for a single file
+# Args: $1 - file path
+# Returns: 0 if hash stored, 1 if already exists
 init_hash() {
     local file="$1"
     local fullpath=$(realpath "$file")
-    local hash=$(sha256sum "$fullpath" | awk '{print $1}')
     local target="hash_store"
 
     touch "$target"
-
+    # Skip if hash already exists
     if grep -q "^$fullpath:" "$target"; then
         return 1
     fi
 
-    echo "$fullpath:$hash" >> "$target"
+    local hash=$(calculate_hash "$file")
+    store_hash "$fullpath" "$hash"
     return 0
 }
 
+# Check files against stored hashes
+# Args: $1 - path to check
+# Returns: 0 if unchanged, 1 if modified
 check() {
     local path="$1"
-
-    if [ ! -e "$path" ]; then
-        echo "Error: $path does not exist"
-        return 1
-    fi
+    check_path_exists "$path" || return 1
 
     if [ -d "$path" ]; then
-        local modified=false
-        while IFS= read -r -d '' item; do
-            if [ -f "$item" ]; then
-                if ! check_hash "$item"; then
-                    modified=true
-                fi
-            fi
-        done < <(find "$path" -print0)
-
-        if [ "$modified" = true ]; then
+        # Check directory
+        local result=$(process_directory "$path" "check_hash" "check")
+        if [ "$result" = "true" ]; then
             echo "Status: Modified (Hash mismatch)"
             return 1
         else
             echo "Status: Unmodified"
             return 0
         fi
-    fi
-
-    if [ -f "$path" ]; then
+    elif [ -f "$path" ]; then
+        # Check single file
         if check_hash "$path"; then
             echo "Status: Unmodified"
             return 0
@@ -97,56 +152,64 @@ check() {
     fi
 }
 
+# Check if a file's current hash matches stored hash
+# Args: $1 - file path
+# Returns: 0 if matches, 1 if different
 check_hash() {
     local file="$1"
     local fullpath=$(realpath "$file")
-    local current_hash=$(sha256sum "$fullpath" | awk '{print $1}')
+    local current_hash=$(calculate_hash "$file")
     local target="hash_store"
 
-    if [ ! -f "$target" ]; then
-        return 1
-    fi
+    # Check if hash store exists
+    [ ! -f "$target" ] && return 1
 
-    local stored_hash=$(grep "^$fullpath:" "$target" | cut -d: -f2)
-    if [ -z "$stored_hash" ]; then
-        return 1
-    fi
+    # Get stored hash
+    local stored_hash=$(get_stored_hash "$fullpath")
+    [ -z "$stored_hash" ] && return 1
 
+    # Compare hashes
     if [ "$current_hash" = "$stored_hash" ]; then
         return 0
     else
+        echo "Modified file: $fullpath" >&2
         return 1
     fi
 }
 
+# Update stored hash for a file
+# Args: $1 - file path
+# Returns: 0 on success, 1 on failure
 update() {
     local path="$1"
-    local fullpath=$(realpath "$path")
+    check_path_exists "$path" || return 1
 
     if [ ! -f "$path" ]; then
-        echo "Error: File does not exist"
+        echo "Error: Not a file"
         return 1
     fi
 
-    local hash=$(sha256sum "$fullpath" | awk '{print $1}')
+    local fullpath=$(realpath "$path")
+    local hash=$(calculate_hash "$path")
     local target="hash_store"
 
-    # Remove old hash if exists
+    # Remove old hash entry if exists
     sed -i "\\:^$fullpath\::d" "$target"
-
-    # Add new hash
-    echo "$fullpath:$hash" >> "$target"
+    # Store new hash
+    store_hash "$fullpath" "$hash"
     echo "Hash updated successfully."
     return 0
 }
 
-if [ "$1" = "init" ]; then
-    init "$2"
-    exit 0
-elif [ "$1" = "check" ]; then
-    check "$2"
-    exit 0
-elif [ "$1" = "update" ]; then
-    update "$2"
-    exit 0
-fi
+# Main command handling
+case "$1" in
+    init|check|update)
+        "$1" "$2"
+        exit $?
+        ;;
+    *)
+        echo "Error: Invalid command. Use init, check, or update"
+        echo "Usage: $0 <command> <path>"
+        exit 1
+        ;;
+esac
