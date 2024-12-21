@@ -1,0 +1,5 @@
+Mar 15 10:23:45 server systemd[1]: Starting System Logging Service...
+Mar 15 10:23:46 server systemd[1]: Started System Logging Service.
+Mar 15 10:23:47 server sshd[1234]: Failed password for invalid user admin from 192.168.1.10 port 22
+Mar 15 10:23:48 server nginx[5678]: SSL error (SSL: error:ACCESS_DENIED:NA:0:certificate verify failed)
+Mar 15 10:23:49 server kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:11:22:33:44:55 SRC=192.168.1.100

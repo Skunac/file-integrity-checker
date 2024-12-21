@@ -1,0 +1,5 @@
+{"timestamp":"2024-03-15T10:23:45Z","level":"info","msg":"Server started","version":"1.2.3"}
+{"timestamp":"2024-03-15T10:23:46Z","level":"debug","msg":"Config loaded","file":"config.json"}
+{"timestamp":"2024-03-15T10:23:47Z","level":"warn","msg":"Deprecated API call","endpoint":"/api/v1/users"}
+{"timestamp":"2024-03-15T10:23:48Z","level":"error","msg":"Database connection failed","error":"timeout"}
+{"timestamp":"2024-03-15T10:23:49Z","level":"info","msg":"Cache cleared","items":150}

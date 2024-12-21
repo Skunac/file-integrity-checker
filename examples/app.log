@@ -1,0 +1,7 @@
+[2024-03-15 10:23:45] INFO: Application started
+[2024-03-15 10:23:46] DEBUG: Loading configuration from config.json
+[2024-03-15 10:23:47] WARNING: Cache directory not found, creating new one
+[2024-03-15 10:23:48] ERROR: Failed to connect to database - retrying in 5s
+[2024-03-15 10:23:53] INFO: Database connection established
+[2024-03-15 10:24:01] INFO: User login successful - userId: 12345
+[2024-03-15 10:24:05] ERROR: Invalid file format detected in upload: doc.xyz

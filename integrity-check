@@ -1,0 +1,152 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+    echo "Error: At least 2 arguments required"
+    echo "Usage: $0 <command> <path>"
+    exit 1
+fi
+
+init() {
+    local path="$1"
+    local processed=false
+
+    if [ ! -e "$path" ]; then
+        echo "Error: $path does not exist"
+        return 1
+    fi
+
+    if [ -d "$path" ]; then
+        while IFS= read -r -d '' item; do
+            if [ -f "$item" ]; then
+                init_hash "$item"
+                processed=true
+            fi
+        done < <(find "$path" -print0)
+
+        if [ "$processed" = true ]; then
+            echo "Hashes stored successfully."
+            return 0
+        else
+            echo "No files processed."
+            return 1
+        fi
+    fi
+
+    if [ -f "$path" ]; then
+        if init_hash "$path"; then
+            echo "Hashes stored successfully."
+            return 0
+        fi
+    fi
+
+    echo "Error: $path is not a file or directory"
+    return 1
+}
+
+init_hash() {
+    local file="$1"
+    local fullpath=$(realpath "$file")
+    local hash=$(sha256sum "$fullpath" | awk '{print $1}')
+    local target="hash_store"
+
+    touch "$target"
+
+    if grep -q "^$fullpath:" "$target"; then
+        return 1
+    fi
+
+    echo "$fullpath:$hash" >> "$target"
+    return 0
+}
+
+check() {
+    local path="$1"
+
+    if [ ! -e "$path" ]; then
+        echo "Error: $path does not exist"
+        return 1
+    fi
+
+    if [ -d "$path" ]; then
+        local modified=false
+        while IFS= read -r -d '' item; do
+            if [ -f "$item" ]; then
+                if ! check_hash "$item"; then
+                    modified=true
+                fi
+            fi
+        done < <(find "$path" -print0)
+
+        if [ "$modified" = true ]; then
+            echo "Status: Modified (Hash mismatch)"
+            return 1
+        else
+            echo "Status: Unmodified"
+            return 0
+        fi
+    fi
+
+    if [ -f "$path" ]; then
+        if check_hash "$path"; then
+            echo "Status: Unmodified"
+            return 0
+        else
+            echo "Status: Modified (Hash mismatch)"
+            return 1
+        fi
+    fi
+}
+
+check_hash() {
+    local file="$1"
+    local fullpath=$(realpath "$file")
+    local current_hash=$(sha256sum "$fullpath" | awk '{print $1}')
+    local target="hash_store"
+
+    if [ ! -f "$target" ]; then
+        return 1
+    fi
+
+    local stored_hash=$(grep "^$fullpath:" "$target" | cut -d: -f2)
+    if [ -z "$stored_hash" ]; then
+        return 1
+    fi
+
+    if [ "$current_hash" = "$stored_hash" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+update() {
+    local path="$1"
+    local fullpath=$(realpath "$path")
+
+    if [ ! -f "$path" ]; then
+        echo "Error: File does not exist"
+        return 1
+    fi
+
+    local hash=$(sha256sum "$fullpath" | awk '{print $1}')
+    local target="hash_store"
+
+    # Remove old hash if exists
+    sed -i "\\:^$fullpath\::d" "$target"
+
+    # Add new hash
+    echo "$fullpath:$hash" >> "$target"
+    echo "Hash updated successfully."
+    return 0
+}
+
+if [ "$1" = "init" ]; then
+    init "$2"
+    exit 0
+elif [ "$1" = "check" ]; then
+    check "$2"
+    exit 0
+elif [ "$1" = "update" ]; then
+    update "$2"
+    exit 0
+fi

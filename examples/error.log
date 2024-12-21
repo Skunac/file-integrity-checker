@@ -1,0 +1,7 @@
+2024-03-15T10:23:45Z [ERROR] System crash detected: segmentation fault
+2024-03-15T10:23:46Z [ERROR] Stack trace:
+  at Object.<anonymous> (/app/server.js:45:12)
+  at Module._compile (internal/modules/cjs/loader.js:999:30)
+2024-03-15T10:23:47Z [ERROR] Memory leak detected in module: auth
+2024-03-15T10:23:48Z [ERROR] Failed to write to disk: no space left
+2024-03-15T10:23:49Z [ERROR] Connection timeout: database unreachable

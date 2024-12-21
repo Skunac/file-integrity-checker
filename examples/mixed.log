@@ -1,0 +1,5 @@
+[INFO] 2024-03-15 10:23:45 - Starting backup process
+ERROR: Backup failed - insufficient permissions
+192.168.1.100 - - [15/Mar/2024:10:23:47] "GET /backup/status HTTP/1.1" 500
+{level: "warning", timestamp: "2024-03-15T10:23:48Z", msg: "Retry attempt 1 of 3"}
+2024-03-15 10:23:49 DEBUG Process terminated with exit code 1
